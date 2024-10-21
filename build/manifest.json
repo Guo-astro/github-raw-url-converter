@@ -1,12 +1,12 @@
 {
   "manifest_version": 3,
-  "name": "GitHub Raw Link Converter",
-  "version": "1.0.1",
+  "name": "Github Raw Link Converter",
+  "version": "1.0.2",
   "description": "Convert GitHub URLs to Raw URLs effortlessly.",
   "action": {
     "default_popup": "popup.html"
   },
-  "permissions": ["clipboardWrite"],
+  "permissions": [],
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'"
   },
