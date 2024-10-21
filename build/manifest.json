@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "RawLinker",
+  "name": "GitHub Raw Link Converter",
   "version": "1.0.1",
   "description": "Convert GitHub URLs to Raw URLs effortlessly.",
   "action": {
