@@ -9,7 +9,7 @@ ZIP_DIR="build_zips"
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 
 # Extract version from package.json
-VERSION=$(grep '"version":' package.json | sed -E 's/.*"version": "(.*)",/\1/')
+VERSION=$(grep '"version":' ./build/manifest.json | sed -E 's/.*"version": "(.*)",/\1/')
 
 # Define the ZIP file name
 ZIP_NAME="github-url-converter_v${VERSION}_${TIMESTAMP}.zip"
