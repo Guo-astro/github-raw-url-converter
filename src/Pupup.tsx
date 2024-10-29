@@ -1,11 +1,13 @@
 // src/Popup.tsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert } from "@/components/ui/alert"; // Assuming you have an Alert component
 import { Progress } from "@/components/ui/progress";
-import { FaExclamationTriangle } from "react-icons/fa"; // Import the missing icon
+import { FaExclamationTriangle } from "react-icons/fa";
 import "./Popup.css"; // Optional: Remove if Shadcn UI handles all styling
+import { useQuery } from "@tanstack/react-query";
+import { z } from "zod";
 
 interface GitHubURLComponents {
   username: string;
@@ -61,88 +63,38 @@ const parseGitHubURL = (url: string): GitHubURLComponents => {
   return { username, repo, branch, path };
 };
 
-const Popup: React.FC = () => {
-  const [inputUrl, setInputUrl] = useState<string>("");
-  const [outputUrl, setOutputUrl] = useState<string>("");
-  const [loading, setLoading] = useState<boolean>(false);
-  const [errorMessage, setErrorMessage] = useState<string>("");
+const githubFileResponseSchema = z.object({
+  name: z.string(),
+  path: z.string(),
+  sha: z.string(),
+  size: z.number(),
+  url: z.string().url(),
+  html_url: z.string().url(),
+  git_url: z.string().url(),
+  download_url: z.string().url(),
+  type: z.string(),
+  content: z.string().optional(),
+});
+const githubFileResponseSchemaArraySchema = z.array(githubFileResponseSchema);
 
-  // Function to convert a single file path to its raw URL
-  const convertToRawUrl = ({
-    username,
-    repo,
-    branch,
-    path,
-  }: GitHubURLComponents): string => {
-    return `https://raw.githubusercontent.com/${username}/${repo}/${branch}/${path}`;
-  };
+type GithubFileResponseSchemaType = z.infer<
+  typeof githubFileResponseSchema | typeof githubFileResponseSchemaArraySchema
+>;
 
-  // Function to fetch contents from GitHub API with exponential backoff
-  const fetchGitHubContents = async (
-    username: string,
-    repo: string,
-    branch: string,
-    path: string
-  ): Promise<any[]> => {
-    const apiUrl = `https://api.github.com/repos/${username}/${repo}/contents/${encodeURIComponent(
-      path
-    )}?ref=${encodeURIComponent(branch)}`;
-    const response = await fetchWithExponentialBackoff(apiUrl);
+// Custom Hook to fetch initial GitHub resource (file or directory)
+const useFetchInitialResource = (
+  components: GitHubURLComponents,
+  fetchTriggered: boolean
+) => {
+  const { username, repo, branch, path } = components;
 
-    if (response.status === 404) {
-      throw new Error(
-        `Resource not found. Please check the repository, branch, and path.\nAPI URL: ${apiUrl}`
-      );
-    }
+  const apiUrl = `https://api.github.com/repos/${username}/${repo}/contents/${encodeURIComponent(
+    path
+  )}?ref=${encodeURIComponent(branch)}`;
 
-    if (response.status === 403) {
-      throw new Error(
-        `Access forbidden. You might have exceeded the GitHub API rate limits.\nPlease try again later or authenticate your requests.\nAPI URL: ${apiUrl}`
-      );
-    }
-
-    if (!response.ok) {
-      throw new Error(
-        `GitHub API error: ${response.status} ${response.statusText}\nAPI URL: ${apiUrl}`
-      );
-    }
-
-    return response.json();
-  };
-
-  // Recursive function to collect all file paths in a directory
-  const collectFilePaths = async (
-    username: string,
-    repo: string,
-    branch: string,
-    path: string,
-    filePaths: string[] = []
-  ): Promise<string[]> => {
-    const contents = await fetchGitHubContents(username, repo, branch, path);
-
-    for (const item of contents) {
-      if (item.type === "file") {
-        filePaths.push(item.path);
-      } else if (item.type === "dir") {
-        await collectFilePaths(username, repo, branch, item.path, filePaths);
-      }
-      // Ignoring other types like symlinks, submodules, etc.
-    }
-
-    return filePaths;
-  };
-
-  const handleConvert = async () => {
-    setLoading(true);
-    setErrorMessage("");
-    try {
-      // Parse the input URL
-      const { username, repo, branch, path } = parseGitHubURL(inputUrl.trim());
-
-      // Fetch to determine if it's a file or directory with exponential backoff
-      const apiUrl = `https://api.github.com/repos/${username}/${repo}/contents/${encodeURIComponent(
-        path
-      )}?ref=${encodeURIComponent(branch)}`;
+  return useQuery({
+    queryKey: ["initialResource", username, repo, branch, path],
+    queryFn: async () => {
       const response = await fetchWithExponentialBackoff(apiUrl);
 
       if (response.status === 404) {
@@ -163,45 +115,74 @@ const Popup: React.FC = () => {
         );
       }
 
-      const data = await response.json();
+      const dataPromise: Promise<GithubFileResponseSchemaType> =
+        response.json();
+      return dataPromise;
+    },
+    enabled:
+      username !== "" &&
+      repo !== "" &&
+      branch !== "" &&
+      path !== "" &&
+      fetchTriggered,
+  });
+};
 
-      let rawUrls: string[] = [];
+const Popup: React.FC = () => {
+  const [inputUrl, setInputUrl] = useState<string>("");
+  const [fetchParams, setFetchParams] = useState<GitHubURLComponents>({
+    username: "",
+    repo: "",
+    branch: "",
+    path: "",
+  });
+  const [triggerFetch, setTriggerFetch] = useState<boolean>(false);
+  const [outputUrl, setOutputUrl] = useState<string>("");
 
-      if (Array.isArray(data)) {
-        // It's a directory
-        const filePaths = await collectFilePaths(username, repo, branch, path);
-        if (filePaths.length === 0) {
-          throw new Error("No files found in the specified directory.");
-        }
-        rawUrls = filePaths.map((filePath) =>
-          convertToRawUrl({ username, repo, branch, path: filePath })
-        );
-      } else if (data.type === "file") {
-        // It's a single file
-        const rawUrl = convertToRawUrl({ username, repo, branch, path });
-        rawUrls.push(rawUrl);
+  const repos = useFetchInitialResource(fetchParams, triggerFetch);
+  // Handle the final output and clipboard copying
+  useEffect(() => {
+    if (!repos.isLoading && !repos.isError && repos.data) {
+      const content = repos.data;
+      if (Array.isArray(content)) {
+        // Handle directory contents
+        const filePaths = content.map((item) => item.download_url);
+        const finalStr = filePaths.join("\n");
+        setOutputUrl(finalStr);
+        navigator.clipboard
+          .writeText(finalStr)
+          .then(() => {
+            alert("Raw URL(s) copied to clipboard!");
+          })
+          .catch(() => {
+            alert("Failed to copy to clipboard.");
+          });
       } else {
-        throw new Error("Unsupported GitHub content type.");
+        // Handle single file
+        const output = content.download_url;
+        setOutputUrl(output);
+        navigator.clipboard
+          .writeText(output)
+          .then(() => {
+            alert("Raw URL(s) copied to clipboard!");
+          })
+          .catch(() => {
+            alert("Failed to copy to clipboard.");
+          });
       }
+      // Reset triggerFetch to allow future conversions
+      setTriggerFetch(false);
+    }
+  }, [repos, fetchParams]);
 
-      // Join all raw URLs with newlines
-      const output = rawUrls.join("\n");
-      setOutputUrl(output);
-
-      // Copy to clipboard
-      await navigator.clipboard.writeText(output);
-      alert("Raw URL(s) copied to clipboard!");
-    } catch (error) {
-      if (error instanceof Error) {
-        setErrorMessage(error.message);
-        alert(`Error: ${error.message}`);
-      } else {
-        setErrorMessage("An unexpected error occurred.");
-        alert("An unexpected error occurred.");
-      }
-      setOutputUrl("");
-    } finally {
-      setLoading(false);
+  const parseInputUrl = () => {
+    const trimmedUrl = inputUrl.trim();
+    if (trimmedUrl) {
+      const parsed = parseGitHubURL(trimmedUrl);
+      setFetchParams(parsed);
+      setTriggerFetch(true);
+    } else {
+      alert("Invalid GitHub URL. Please check and try again.");
     }
   };
 
@@ -215,36 +196,36 @@ const Popup: React.FC = () => {
         onChange={(e) => setInputUrl(e.target.value)}
         placeholder="Paste your GitHub URL here"
         rows={4}
-        disabled={loading}
+        disabled={repos.isLoading}
         className="mb-4"
       />
       <Button
-        onClick={handleConvert}
-        disabled={loading || !inputUrl.trim()}
+        onClick={parseInputUrl}
+        disabled={repos.isLoading || !inputUrl.trim()}
         className="w-full mb-4"
       >
-        {loading ? "Converting..." : "Convert"}
+        {repos.isLoading ? "Converting..." : "Convert"}
       </Button>
 
       {/* Progress Bar */}
-      {loading && (
+      {repos.isLoading && (
         <div className="mb-4">
           <Progress className="w-full" />
         </div>
       )}
 
       {/* Error Message */}
-      {errorMessage && (
+      {repos.isError && (
         <Alert variant="destructive" className="mb-4">
           <div className="flex items-center">
             <FaExclamationTriangle className="w-5 h-5 mr-2" />
-            <span>{errorMessage}</span>
+            <span>{repos.error.message}</span>
           </div>
         </Alert>
       )}
 
       {/* Warning Note - Always Shown */}
-      <Alert variant="warning" className="mb-4">
+      <Alert variant="default" className="mb-4">
         <div className="flex items-start">
           <FaExclamationTriangle className="w-5 h-5 mr-2 mt-1" />
           <div>
@@ -278,14 +259,17 @@ const Popup: React.FC = () => {
         </div>
       </Alert>
 
-      <Textarea
-        value={outputUrl}
-        readOnly
-        placeholder="Raw URL(s) will appear here"
-        rows={10}
-        disabled={loading}
-        className="mb-4"
-      />
+      {/* Output Textarea */}
+      {outputUrl && (
+        <Textarea
+          value={outputUrl}
+          readOnly
+          placeholder="Raw URL(s) will appear here"
+          rows={10}
+          disabled={repos.isLoading}
+          className="mb-4"
+        />
+      )}
     </div>
   );
 };
