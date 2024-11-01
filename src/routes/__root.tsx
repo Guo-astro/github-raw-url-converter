@@ -9,60 +9,85 @@ import { TanStackRouterDevtools } from "@tanstack/router-devtools";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { Spinner } from "../components/Spinner";
 import type { QueryClient } from "@tanstack/react-query";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarTrigger,
+} from "@/components/ui/sidebar";
+import { Home, Inbox } from "lucide-react";
 
-function RouterSpinner() {
-  const isLoading = useRouterState({ select: (s) => s.status === "pending" });
-  return <Spinner show={isLoading} />;
-}
+// function RouterSpinner() {
+//   const isLoading = useRouterState({ select: (s) => s.status === "pending" });
+//   return <Spinner show={isLoading} />;
+// }
 
 export const Route = createRootRouteWithContext<{
   queryClient: QueryClient;
 }>()({
   component: RootComponent,
 });
+const items = [
+  {
+    title: "Github raw link converter",
+    url: "/github-raw-link-converter",
+    icon: Home,
+  },
+  {
+    title: "Datetime converter",
+    url: "/datetime-converter",
+    icon: Inbox,
+  },
+];
 
 function RootComponent() {
   return (
     <>
       <div className={`min-h-screen flex flex-col`}>
-        <div className={`flex items-center border-b gap-2`}>
-          <h1 className={`text-3xl p-2`}>Kitchen Sink</h1>
-          {/* Show a global spinner when the router is transitioning */}
-          <div className={`text-3xl`}>
-            <RouterSpinner />
-          </div>
-        </div>
-        <div className={`flex-1 flex`}>
-          <div className={`divide-y w-56`}>
-            {([["/github-raw-link-converter", "gw"]] as const).map(
-              ([to, label]) => {
-                return (
-                  <div key={to}>
-                    <Link
-                      to={to}
-                      activeOptions={
-                        {
-                          // If the route points to the root of it's parent,
-                          // make sure it's only active if it's exact
-                          // exact: to === '.',
-                        }
-                      }
-                      preload="intent"
-                      className={`block py-2 px-3 text-blue-700`}
-                      // Make "active" links bold
-                      activeProps={{ className: `font-bold` }}
-                    >
-                      {label}
-                    </Link>
-                  </div>
-                );
-              }
-            )}
-          </div>
-          <div className={`flex-1 border-l`}>
+        <SidebarProvider>
+          <Sidebar className="h-full">
+            <SidebarContent>
+              <SidebarGroup>
+                <SidebarGroupLabel>ToolBox</SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {items.map((item) => (
+                      <SidebarMenuItem key={item.title}>
+                        <SidebarMenuButton asChild>
+                          <Link
+                            to={item.url}
+                            preload="intent"
+                            className="block py-2 px-3 text-blue-700 flex items-center gap-2"
+                            activeProps={{ className: "font-bold" }}
+                            activeOptions={{
+                              // If the route points to the root of its parent,
+                              // make sure it's only active if it's exact
+                              exact: item.url === ".",
+                            }}
+                          >
+                            <item.icon />
+                            <span>{item.title}</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            </SidebarContent>
+          </Sidebar>
+
+          <main>
+            <SidebarTrigger />
             <Outlet />
-          </div>
-        </div>
+          </main>
+        </SidebarProvider>
       </div>
       <ReactQueryDevtools buttonPosition="top-right" />
       <TanStackRouterDevtools position="bottom-right" />

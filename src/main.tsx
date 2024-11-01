@@ -53,10 +53,8 @@ declare module "@tanstack/react-router" {
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <Layout>
-      <QueryClientProvider client={queryClient}>
-        <RouterProvider router={router} defaultPreload="intent" />
-      </QueryClientProvider>
-    </Layout>
+    <QueryClientProvider client={queryClient}>
+      <RouterProvider router={router} defaultPreload="intent" />
+    </QueryClientProvider>
   </StrictMode>
 );
