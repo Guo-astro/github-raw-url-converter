@@ -1,134 +1,18 @@
 // src/Popup.tsx
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert } from "@/components/ui/alert"; // Assuming you have an Alert component
 import { Progress } from "@/components/ui/progress";
 import { FaExclamationTriangle } from "react-icons/fa";
-import "./Popup.css"; // Optional: Remove if Shadcn UI handles all styling
+import "@/github-raw-link-converter.css"; // Optional: Remove if Shadcn UI handles all styling
 import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
-
-interface GitHubURLComponents {
-  username: string;
-  repo: string;
-  branch: string;
-  path: string;
-}
-
-// Constants for Exponential Backoff
-const MAX_RETRIES = 5;
-const INITIAL_DELAY = 1000; // 1 second
-
-// Helper function to perform fetch with exponential backoff
-const fetchWithExponentialBackoff = async (
-  url: string,
-  options: RequestInit = {},
-  retries: number = MAX_RETRIES,
-  delay: number = INITIAL_DELAY
-): Promise<Response> => {
-  try {
-    const response = await fetch(url, options);
-    if (response.ok || response.status === 404 || response.status === 403) {
-      // Return response if successful, resource not found, or forbidden
-      return response;
-    }
-    if (retries > 0 && (response.status >= 500 || response.status === 429)) {
-      // Retry for server errors or too many requests
-      await new Promise((resolve) => setTimeout(resolve, delay));
-      return fetchWithExponentialBackoff(url, options, retries - 1, delay * 2);
-    }
-    return response;
-  } catch (error) {
-    if (retries > 0) {
-      // Retry on network errors
-      await new Promise((resolve) => setTimeout(resolve, delay));
-      return fetchWithExponentialBackoff(url, options, retries - 1, delay * 2);
-    }
-    throw error;
-  }
-};
-
-// Function to parse GitHub URLs and extract components
-const parseGitHubURL = (url: string): GitHubURLComponents => {
-  const githubRegex =
-    /^https:\/\/github\.com\/([^\/]+)\/([^\/]+)\/(?:blob|tree)\/([^\/]+)\/(.+)$/;
-  const match = url.match(githubRegex);
-
-  if (!match) {
-    throw new Error("Invalid GitHub URL format.");
-  }
-
-  const [, username, repo, branch, path] = match;
-  return { username, repo, branch, path };
-};
-
-const githubFileResponseSchema = z.object({
-  name: z.string(),
-  path: z.string(),
-  sha: z.string(),
-  size: z.number(),
-  url: z.string().url(),
-  html_url: z.string().url(),
-  git_url: z.string().url(),
-  download_url: z.string().url(),
-  type: z.string(),
-  content: z.string().optional(),
+import { createFileRoute } from "@tanstack/react-router";
+export const Route = createFileRoute("/github-raw-link-converter")({
+  component: GithubRawLinkConverter,
 });
-const githubFileResponseSchemaArraySchema = z.array(githubFileResponseSchema);
-
-type GithubFileResponseSchemaType = z.infer<
-  typeof githubFileResponseSchema | typeof githubFileResponseSchemaArraySchema
->;
-
-// Custom Hook to fetch initial GitHub resource (file or directory)
-const useFetchInitialResource = (
-  components: GitHubURLComponents,
-  fetchTriggered: boolean
-) => {
-  const { username, repo, branch, path } = components;
-
-  const apiUrl = `https://api.github.com/repos/${username}/${repo}/contents/${encodeURIComponent(
-    path
-  )}?ref=${encodeURIComponent(branch)}`;
-
-  return useQuery({
-    queryKey: ["initialResource", username, repo, branch, path],
-    queryFn: async () => {
-      const response = await fetchWithExponentialBackoff(apiUrl);
-
-      if (response.status === 404) {
-        throw new Error(
-          `Resource not found. Please check the repository, branch, and path.\nAPI URL: ${apiUrl}`
-        );
-      }
-
-      if (response.status === 403) {
-        throw new Error(
-          `Access forbidden. You might have exceeded the GitHub API rate limits.\nPlease try again later or authenticate your requests.\nAPI URL: ${apiUrl}`
-        );
-      }
-
-      if (!response.ok) {
-        throw new Error(
-          `GitHub API error: ${response.status} ${response.statusText}\nAPI URL: ${apiUrl}`
-        );
-      }
-
-      const dataPromise: Promise<GithubFileResponseSchemaType> =
-        response.json();
-      return dataPromise;
-    },
-    enabled:
-      username !== "" &&
-      repo !== "" &&
-      branch !== "" &&
-      path !== "" &&
-      fetchTriggered,
-  });
-};
-
-const Popup: React.FC = () => {
+function GithubRawLinkConverter() {
   const [inputUrl, setInputUrl] = useState<string>("");
   const [fetchParams, setFetchParams] = useState<GitHubURLComponents>({
     username: "",
@@ -272,6 +156,122 @@ const Popup: React.FC = () => {
       )}
     </div>
   );
+}
+interface GitHubURLComponents {
+  username: string;
+  repo: string;
+  branch: string;
+  path: string;
+}
+
+// Constants for Exponential Backoff
+const MAX_RETRIES = 5;
+const INITIAL_DELAY = 1000; // 1 second
+
+// Helper function to perform fetch with exponential backoff
+const fetchWithExponentialBackoff = async (
+  url: string,
+  options: RequestInit = {},
+  retries: number = MAX_RETRIES,
+  delay: number = INITIAL_DELAY
+): Promise<Response> => {
+  try {
+    const response = await fetch(url, options);
+    if (response.ok || response.status === 404 || response.status === 403) {
+      // Return response if successful, resource not found, or forbidden
+      return response;
+    }
+    if (retries > 0 && (response.status >= 500 || response.status === 429)) {
+      // Retry for server errors or too many requests
+      await new Promise((resolve) => setTimeout(resolve, delay));
+      return fetchWithExponentialBackoff(url, options, retries - 1, delay * 2);
+    }
+    return response;
+  } catch (error) {
+    if (retries > 0) {
+      // Retry on network errors
+      await new Promise((resolve) => setTimeout(resolve, delay));
+      return fetchWithExponentialBackoff(url, options, retries - 1, delay * 2);
+    }
+    throw error;
+  }
 };
 
-export default Popup;
+// Function to parse GitHub URLs and extract components
+const parseGitHubURL = (url: string): GitHubURLComponents => {
+  const githubRegex =
+    /^https:\/\/github\.com\/([^\/]+)\/([^\/]+)\/(?:blob|tree)\/([^\/]+)\/(.+)$/;
+  const match = url.match(githubRegex);
+
+  if (!match) {
+    throw new Error("Invalid GitHub URL format.");
+  }
+
+  const [, username, repo, branch, path] = match;
+  return { username, repo, branch, path };
+};
+
+const githubFileResponseSchema = z.object({
+  name: z.string(),
+  path: z.string(),
+  sha: z.string(),
+  size: z.number(),
+  url: z.string().url(),
+  html_url: z.string().url(),
+  git_url: z.string().url(),
+  download_url: z.string().url(),
+  type: z.string(),
+  content: z.string().optional(),
+});
+const githubFileResponseSchemaArraySchema = z.array(githubFileResponseSchema);
+
+type GithubFileResponseSchemaType = z.infer<
+  typeof githubFileResponseSchema | typeof githubFileResponseSchemaArraySchema
+>;
+
+// Custom Hook to fetch initial GitHub resource (file or directory)
+const useFetchInitialResource = (
+  components: GitHubURLComponents,
+  fetchTriggered: boolean
+) => {
+  const { username, repo, branch, path } = components;
+
+  const apiUrl = `https://api.github.com/repos/${username}/${repo}/contents/${encodeURIComponent(
+    path
+  )}?ref=${encodeURIComponent(branch)}`;
+
+  return useQuery({
+    queryKey: ["initialResource", username, repo, branch, path],
+    queryFn: async () => {
+      const response = await fetchWithExponentialBackoff(apiUrl);
+
+      if (response.status === 404) {
+        throw new Error(
+          `Resource not found. Please check the repository, branch, and path.\nAPI URL: ${apiUrl}`
+        );
+      }
+
+      if (response.status === 403) {
+        throw new Error(
+          `Access forbidden. You might have exceeded the GitHub API rate limits.\nPlease try again later or authenticate your requests.\nAPI URL: ${apiUrl}`
+        );
+      }
+
+      if (!response.ok) {
+        throw new Error(
+          `GitHub API error: ${response.status} ${response.statusText}\nAPI URL: ${apiUrl}`
+        );
+      }
+
+      const dataPromise: Promise<GithubFileResponseSchemaType> =
+        response.json();
+      return dataPromise;
+    },
+    enabled:
+      username !== "" &&
+      repo !== "" &&
+      branch !== "" &&
+      path !== "" &&
+      fetchTriggered,
+  });
+};
