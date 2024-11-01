@@ -15,9 +15,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { FiRefreshCw } from "react-icons/fi"; // Import the reverse icon
-
-// Import Shadcn UI components
+import { FiRefreshCw } from "react-icons/fi";
+import { Alert } from "@/components/ui/alert";
+import { FaExclamationTriangle } from "react-icons/fa";
 
 export const Route = createFileRoute("/datetime-converter")({
   component: DatetimeConverter,
@@ -36,25 +36,45 @@ function FieldInfo({ field }: { field: FieldApi<any, any, any, any> }) {
   );
 }
 
-const datetimeSchema = z.object({
-  leftTimezone: z.string(),
-  rightTimezone: z.string(),
-  inputDatetime: z.string().refine((val) => !isNaN(Date.parse(val)), {
-    message: "Invalid datetime format. Please use ISO8601 format.",
-  }),
-});
+const datetimeSchema = z
+  .object({
+    leftTimezone: z.string(),
+    rightTimezone: z.string(),
+    inputDatetime: z.string().refine((val) => DateTime.fromISO(val).isValid, {
+      message:
+        "Invalid datetime format. Please use ISO8601 format, e.g., 2024-10-28T05:10:34.125+07:00",
+    }),
+  })
+  .refine(
+    (data) => {
+      if (hasTimezoneInfo(data.inputDatetime)) {
+        return true;
+      } else {
+        return data.leftTimezone;
+      }
+    },
+    {
+      message:
+        "From Timezone is required if input datetime does not include timezone",
+      path: ["leftTimezone"],
+    }
+  );
 
 type DatetimeFormValues = z.infer<typeof datetimeSchema>;
+
+function hasTimezoneInfo(datetimeStr: string) {
+  const timezoneRegex = /(Z|[+-][0-9]{2}:[0-9]{2})$/;
+  return timezoneRegex.test(datetimeStr);
+}
 
 function DatetimeConverter() {
   const form = useForm({
     defaultValues: {
       leftTimezone: "UTC",
       rightTimezone: "Asia/Tokyo",
-      inputDatetime: "2024-10-28T05:10:34.125Z", // Added default value here
+      inputDatetime: "2024-10-28T05:10:34.125Z",
     } as DatetimeFormValues,
     onSubmit: async ({ value }) => {
-      // Do something with form data
       console.log(value);
     },
     validatorAdapter: zodValidator(),
@@ -64,6 +84,7 @@ function DatetimeConverter() {
   });
 
   const [outputDatetime, setOutputDatetime] = useState("");
+  const [inputIncludesTimezone, setInputIncludesTimezone] = useState(false);
 
   const timezones = [
     { label: "UTC", value: "UTC" },
@@ -71,7 +92,6 @@ function DatetimeConverter() {
     // Add more timezones as needed
   ];
 
-  // Function to reverse the timezones
   const handleReverseTimezones = () => {
     const { leftTimezone, rightTimezone } = form.state.values;
     form.setFieldValue("leftTimezone", rightTimezone);
@@ -79,32 +99,57 @@ function DatetimeConverter() {
   };
 
   useEffect(() => {
+    const { inputDatetime } = form.state.values;
+    setInputIncludesTimezone(hasTimezoneInfo(inputDatetime));
+  }, [form.state.values.inputDatetime]);
+
+  useEffect(() => {
     const { inputDatetime, leftTimezone, rightTimezone } = form.state.values;
-    if (inputDatetime && leftTimezone && rightTimezone) {
-      try {
-        const dt = DateTime.fromISO(inputDatetime, { zone: leftTimezone });
-        if (!dt.isValid) {
-          setOutputDatetime("Invalid input datetime");
-          return;
-        }
-        const converted = dt.setZone(rightTimezone).toISO() || "";
-        setOutputDatetime(converted);
-      } catch {
-        setOutputDatetime("Error converting datetime");
+    if (inputDatetime && rightTimezone) {
+      let dt;
+      if (inputIncludesTimezone) {
+        dt = DateTime.fromISO(inputDatetime, { setZone: true });
+      } else if (leftTimezone) {
+        dt = DateTime.fromISO(inputDatetime, { zone: leftTimezone });
+      } else {
+        dt = DateTime.fromISO(inputDatetime);
       }
+      if (!dt.isValid) {
+        setOutputDatetime("Invalid input datetime");
+        return;
+      }
+      const converted = dt.setZone(rightTimezone).toISO() || "";
+      setOutputDatetime(converted);
     } else {
       setOutputDatetime("");
     }
-  }, [
-    form.state.values,
-    form.state.values.inputDatetime,
-    form.state.values.leftTimezone,
-    form.state.values.rightTimezone,
-  ]);
+  }, [form.state.values, inputIncludesTimezone]);
 
   return (
     <div className="p-6 max-w-lg mx-auto">
       <h1 className="text-2xl font-bold mb-4">Datetime Converter</h1>
+
+      {/* General Explanation */}
+      <p className="mb-4 text-gray-700">
+        TLDR; Enter a datetime in ISO8601 format, select the "From Timezone" and
+        "To Timezone", and click "Convert" to see the converted datetime. If
+        your datetime includes timezone information, the "From Timezone"
+        selection will be ignored.
+      </p>
+
+      {inputIncludesTimezone && (
+        <Alert variant="default" className="mb-4">
+          <div className="flex items-start">
+            <FaExclamationTriangle className="w-5 h-5 mr-2 mt-1" />
+            <div>
+              <strong>Important Information:</strong> Since your input datetime
+              includes timezone information, the "From Timezone" selection is
+              disabled as it will be ignored during conversion.
+            </div>
+          </div>
+        </Alert>
+      )}
+
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -124,7 +169,10 @@ function DatetimeConverter() {
                     value={field.state.value}
                     onValueChange={(value) => field.handleChange(value)}
                   >
-                    <SelectTrigger id={field.name}>
+                    <SelectTrigger
+                      id={field.name}
+                      disabled={inputIncludesTimezone}
+                    >
                       <SelectValue placeholder="Select timezone" />
                     </SelectTrigger>
                     <SelectContent>
@@ -141,7 +189,6 @@ function DatetimeConverter() {
             />
           </div>
 
-          {/* Reverse Button */}
           <Button
             type="button"
             onClick={handleReverseTimezones}
@@ -182,22 +229,23 @@ function DatetimeConverter() {
           <form.Field
             name="inputDatetime"
             validators={{
-              onChange: z.string().refine((val) => !isNaN(Date.parse(val)), {
-                message: "Invalid datetime format. Please use ISO8601 format.",
-              }),
+              onChange: z
+                .string()
+                .refine((val) => DateTime.fromISO(val).isValid, {
+                  message:
+                    "Invalid datetime format. Please use ISO8601 format, e.g., 2024-10-28T05:10:34.125+07:00",
+                }),
             }}
             children={(field) => (
               <>
-                <Label htmlFor={field.name}>
-                  Input Datetime YYYY-MM-DDThh:mm:ss (ISO8601):
-                </Label>
+                <Label htmlFor={field.name}>Input Datetime (ISO8601):</Label>
                 <Input
                   id={field.name}
                   name={field.name}
                   value={field.state.value}
                   onBlur={field.handleBlur}
                   onChange={(e) => field.handleChange(e.target.value)}
-                  placeholder="e.g., 2023-10-12T14:30:00"
+                  placeholder="e.g., 2024-10-28T05:10:34.125+07:00"
                 />
                 <FieldInfo field={field} />
               </>
