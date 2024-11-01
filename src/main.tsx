@@ -9,6 +9,7 @@ import {
 } from "@tanstack/react-query";
 import { ErrorBoundary } from "react-error-boundary";
 import ErrorFallback from "./components/ui/ErrorFallback";
+import Layout from "./layout";
 
 // Initialize QueryClient with default options
 const queryClient = new QueryClient({
@@ -23,18 +24,20 @@ const queryClient = new QueryClient({
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <QueryErrorResetBoundary>
-        {({ reset }) => (
-          <ErrorBoundary
-            resetKeys={[]}
-            FallbackComponent={ErrorFallback}
-            onReset={reset}
-          >
-            <Popup />
-          </ErrorBoundary>
-        )}
-      </QueryErrorResetBoundary>
-    </QueryClientProvider>
+    <Layout>
+      <QueryClientProvider client={queryClient}>
+        <QueryErrorResetBoundary>
+          {({ reset }) => (
+            <ErrorBoundary
+              resetKeys={[]}
+              FallbackComponent={ErrorFallback}
+              onReset={reset}
+            >
+              <Popup />
+            </ErrorBoundary>
+          )}
+        </QueryErrorResetBoundary>
+      </QueryClientProvider>
+    </Layout>
   </StrictMode>
 );
