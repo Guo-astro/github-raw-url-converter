@@ -1,21 +1,29 @@
 /* src/Popup.css */
 
 .popup-container {
-  width: 400px;
+  width: 90%; /* Use relative width */
+  max-width: 800px; /* Set a maximum width for larger screens */
+  aspect-ratio: 16 / 9; /* Maintain 16:9 aspect ratio */
   padding: 20px;
   border: 1px solid #ddd;
   border-radius: 8px;
   background-color: #f9f9f9;
   font-family: Arial, sans-serif;
+  box-sizing: border-box; /* Ensure padding and border are included in the width and height */
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 }
 
 .popup-container h2 {
   text-align: center;
   margin-bottom: 20px;
+  font-size: 1.5rem;
 }
 
 .popup-container textarea {
   width: 100%;
+  flex: 1; /* Allow textarea to grow and fill available space */
   padding: 10px;
   margin-bottom: 10px;
   resize: vertical;
@@ -23,6 +31,7 @@
   border-radius: 4px;
   font-family: monospace;
   font-size: 14px;
+  box-sizing: border-box;
 }
 
 .popup-container button {
@@ -34,6 +43,11 @@
   border-radius: 4px;
   cursor: pointer;
   font-size: 16px;
+  transition: background-color 0.3s ease;
+}
+
+.popup-container button:hover:not(:disabled) {
+  background-color: #0056b3;
 }
 
 .popup-container button:disabled {
@@ -70,6 +84,7 @@
   color: red;
   margin-bottom: 10px;
   font-weight: bold;
+  text-align: center;
 }
 
 /* Warning Note Styles */
@@ -103,4 +118,23 @@
 .warning-text li {
   margin-bottom: 5px;
   font-size: 14px;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 600px) {
+  .popup-container {
+    padding: 15px;
+  }
+
+  .popup-container h2 {
+    font-size: 1.25rem;
+  }
+
+  .popup-container button {
+    font-size: 14px;
+  }
+
+  .warning-text li {
+    font-size: 13px;
+  }
 }
