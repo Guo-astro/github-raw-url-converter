@@ -1,14 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
-import {
-  QueryClient,
-  QueryClientProvider,
-  QueryErrorResetBoundary,
-} from "@tanstack/react-query";
-import { ErrorBoundary } from "react-error-boundary";
-import ErrorFallback from "./components/ui/ErrorFallback";
-import Layout from "./layout";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   ErrorComponent,
   RouterProvider,

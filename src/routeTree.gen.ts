@@ -11,16 +11,10 @@
 // Import Routes
 
 import { Route as rootRoute } from './routes/__root'
-import { Route as GithubRawLinkConverterImport } from './routes/github-raw-link-converter'
 import { Route as DatetimeConverterImport } from './routes/datetime-converter'
+import { Route as IndexImport } from './routes/index'
 
 // Create/Update Routes
-
-const GithubRawLinkConverterRoute = GithubRawLinkConverterImport.update({
-  id: '/github-raw-link-converter',
-  path: '/github-raw-link-converter',
-  getParentRoute: () => rootRoute,
-} as any)
 
 const DatetimeConverterRoute = DatetimeConverterImport.update({
   id: '/datetime-converter',
@@ -28,22 +22,28 @@ const DatetimeConverterRoute = DatetimeConverterImport.update({
   getParentRoute: () => rootRoute,
 } as any)
 
+const IndexRoute = IndexImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => rootRoute,
+} as any)
+
 // Populate the FileRoutesByPath interface
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexImport
+      parentRoute: typeof rootRoute
+    }
     '/datetime-converter': {
       id: '/datetime-converter'
       path: '/datetime-converter'
       fullPath: '/datetime-converter'
       preLoaderRoute: typeof DatetimeConverterImport
-      parentRoute: typeof rootRoute
-    }
-    '/github-raw-link-converter': {
-      id: '/github-raw-link-converter'
-      path: '/github-raw-link-converter'
-      fullPath: '/github-raw-link-converter'
-      preLoaderRoute: typeof GithubRawLinkConverterImport
       parentRoute: typeof rootRoute
     }
   }
@@ -52,38 +52,38 @@ declare module '@tanstack/react-router' {
 // Create and export the route tree
 
 export interface FileRoutesByFullPath {
+  '/': typeof IndexRoute
   '/datetime-converter': typeof DatetimeConverterRoute
-  '/github-raw-link-converter': typeof GithubRawLinkConverterRoute
 }
 
 export interface FileRoutesByTo {
+  '/': typeof IndexRoute
   '/datetime-converter': typeof DatetimeConverterRoute
-  '/github-raw-link-converter': typeof GithubRawLinkConverterRoute
 }
 
 export interface FileRoutesById {
   __root__: typeof rootRoute
+  '/': typeof IndexRoute
   '/datetime-converter': typeof DatetimeConverterRoute
-  '/github-raw-link-converter': typeof GithubRawLinkConverterRoute
 }
 
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/datetime-converter' | '/github-raw-link-converter'
+  fullPaths: '/' | '/datetime-converter'
   fileRoutesByTo: FileRoutesByTo
-  to: '/datetime-converter' | '/github-raw-link-converter'
-  id: '__root__' | '/datetime-converter' | '/github-raw-link-converter'
+  to: '/' | '/datetime-converter'
+  id: '__root__' | '/' | '/datetime-converter'
   fileRoutesById: FileRoutesById
 }
 
 export interface RootRouteChildren {
+  IndexRoute: typeof IndexRoute
   DatetimeConverterRoute: typeof DatetimeConverterRoute
-  GithubRawLinkConverterRoute: typeof GithubRawLinkConverterRoute
 }
 
 const rootRouteChildren: RootRouteChildren = {
+  IndexRoute: IndexRoute,
   DatetimeConverterRoute: DatetimeConverterRoute,
-  GithubRawLinkConverterRoute: GithubRawLinkConverterRoute,
 }
 
 export const routeTree = rootRoute
@@ -96,15 +96,15 @@ export const routeTree = rootRoute
     "__root__": {
       "filePath": "__root.tsx",
       "children": [
-        "/datetime-converter",
-        "/github-raw-link-converter"
+        "/",
+        "/datetime-converter"
       ]
+    },
+    "/": {
+      "filePath": "index.tsx"
     },
     "/datetime-converter": {
       "filePath": "datetime-converter.tsx"
-    },
-    "/github-raw-link-converter": {
-      "filePath": "github-raw-link-converter.tsx"
     }
   }
 }
