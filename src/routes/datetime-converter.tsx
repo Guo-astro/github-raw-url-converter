@@ -87,8 +87,70 @@ function DatetimeConverter() {
   const [inputIncludesTimezone, setInputIncludesTimezone] = useState(false);
 
   const timezones = [
-    { label: "UTC", value: "UTC" },
-    { label: "JST", value: "Asia/Tokyo" },
+    { label: "UTC (Coordinated Universal Time)", value: "UTC" },
+    { label: "JST (Japan Standard Time)", value: "Asia/Tokyo" },
+
+    // North America
+    { label: "EST (Eastern Standard Time)", value: "America/New_York" },
+    { label: "CST (Central Standard Time)", value: "America/Chicago" },
+    { label: "MST (Mountain Standard Time)", value: "America/Denver" },
+    { label: "PST (Pacific Standard Time)", value: "America/Los_Angeles" },
+    { label: "AST (Atlantic Standard Time)", value: "America/Halifax" },
+    { label: "AKST (Alaska Standard Time)", value: "America/Anchorage" },
+    { label: "HST (Hawaii Standard Time)", value: "Pacific/Honolulu" },
+
+    // Europe
+    { label: "GMT (Greenwich Mean Time)", value: "Europe/London" },
+    { label: "BST (British Summer Time)", value: "Europe/London" },
+    { label: "CET (Central European Time)", value: "Europe/Berlin" },
+    { label: "CEST (Central European Summer Time)", value: "Europe/Berlin" },
+    { label: "EET (Eastern European Time)", value: "Europe/Helsinki" },
+    { label: "MSK (Moscow Time)", value: "Europe/Moscow" },
+
+    // Asia
+    { label: "IST (India Standard Time)", value: "Asia/Kolkata" },
+    { label: "SGT (Singapore Time)", value: "Asia/Singapore" },
+    { label: "HKT (Hong Kong Time)", value: "Asia/Hong_Kong" },
+    { label: "KST (Korea Standard Time)", value: "Asia/Seoul" },
+    { label: "CST (China Standard Time)", value: "Asia/Shanghai" },
+    {
+      label: "AWST (Australian Western Standard Time)",
+      value: "Australia/Perth",
+    },
+    {
+      label: "ACST (Australian Central Standard Time)",
+      value: "Australia/Adelaide",
+    },
+    {
+      label: "AEST (Australian Eastern Standard Time)",
+      value: "Australia/Sydney",
+    },
+    {
+      label: "AEDT (Australian Eastern Daylight Time)",
+      value: "Australia/Melbourne",
+    },
+
+    // Oceania
+    { label: "NZST (New Zealand Standard Time)", value: "Pacific/Auckland" },
+    { label: "NZDT (New Zealand Daylight Time)", value: "Pacific/Auckland" },
+
+    // Africa
+    {
+      label: "SAST (South Africa Standard Time)",
+      value: "Africa/Johannesburg",
+    },
+    { label: "EAT (East Africa Time)", value: "Africa/Nairobi" },
+
+    // Middle East
+    { label: "AST (Arabia Standard Time)", value: "Asia/Riyadh" },
+    { label: "GST (Gulf Standard Time)", value: "Asia/Dubai" },
+
+    // Others
+    { label: "PHT (Philippine Time)", value: "Asia/Manila" },
+    { label: "WIB (Western Indonesia Time)", value: "Asia/Jakarta" },
+    { label: "WITA (Central Indonesia Time)", value: "Asia/Makassar" },
+    { label: "WIT (Eastern Indonesia Time)", value: "Asia/Jayapura" },
+
     // Add more timezones as needed
   ];
 
@@ -101,7 +163,7 @@ function DatetimeConverter() {
   useEffect(() => {
     const { inputDatetime } = form.state.values;
     setInputIncludesTimezone(hasTimezoneInfo(inputDatetime));
-  }, [form.state.values.inputDatetime]);
+  }, [form.state.values, form.state.values.inputDatetime]);
 
   useEffect(() => {
     const { inputDatetime, leftTimezone, rightTimezone } = form.state.values;
@@ -263,7 +325,7 @@ function DatetimeConverter() {
       </form>
       {outputDatetime && (
         <div className="mt-6">
-          <h2 className="text-xl font-semibold">Converted Datetime:</h2>
+          <h2 className="text-base font-semibold">Converted Datetime:</h2>
           <p className="mt-2">{outputDatetime}</p>
         </div>
       )}

@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Github Raw Link Converter",
-  "version": "1.0.5",
-  "description": "Convert GitHub URLs to Raw URLs effortlessly.",
+  "name": "ProductivityToolbox",
+  "version": "1.0.6",
+  "description": "A toolbox to boost productivity with tools like converting GitHub URLs to Raw URLs and a datetime converter.",
   "action": {
     "default_popup": "index.html"
   },

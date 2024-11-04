@@ -12,7 +12,7 @@ TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 VERSION=$(grep '"version":' ./public/manifest.json | sed -E 's/.*"version": "(.*)",/\1/')
 
 # Define the ZIP file name
-ZIP_NAME="github-url-converter_v${VERSION}_${TIMESTAMP}.zip"
+ZIP_NAME="productivity_toolbox_v${VERSION}_${TIMESTAMP}.zip"
 
 # Create build_zips directory if it doesn't exist
 mkdir -p $ZIP_DIR
